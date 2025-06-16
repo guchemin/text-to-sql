@@ -211,7 +211,7 @@ class App:
         section_title.grid(row=0, column=0, columnspan=3, pady=(25, 20), padx=25)
         
         # Motor do banco
-        ctk.CTkLabel(conn_frame, text="Motor:", font=ctk.CTkFont(weight="bold", size=14)).grid(
+        ctk.CTkLabel(conn_frame, text="SGBD:", font=ctk.CTkFont(weight="bold", size=14)).grid(
             row=1, column=0, padx=(25, 15), pady=10, sticky="w"
         )
         self.db_engine_combo = ctk.CTkComboBox(
@@ -295,7 +295,7 @@ class App:
         password = self.password_entry.get().strip()
 
         if not all([db_engine, user]):
-            messagebox.showerror("Entrada Inválida", "Motor e Usuário são obrigatórios para listar os bancos.")
+            messagebox.showerror("Entrada Inválida", "SGBD e Usuário são obrigatórios para listar os bancos.")
             return
 
         try:
@@ -330,7 +330,7 @@ class App:
         dbname = self.dbname_combo.get().strip()
 
         if not all([self.db_engine, user, dbname]):
-            messagebox.showerror("Erro de Conexão", "Motor, Usuário e um Banco de Dados selecionado são obrigatórios.")
+            messagebox.showerror("Erro de Conexão", "SGBD, Usuário e um Banco de Dados selecionado são obrigatórios.")
             return
 
         try:
