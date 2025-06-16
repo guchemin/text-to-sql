@@ -1,12 +1,25 @@
-from ollama import Client
 import re
 
 import pandas as pd
 import psycopg2
 import pymysql
 
-# Inicializa cliente para Ollama local
-client = Client(host='http://localhost:11434')
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
+
+# Configurar a API Key do Gemini
+# Obtém a API Key da variável de ambiente
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    raise ValueError("A variável de ambiente GOOGLE_API_KEY não está definida. Certifique-se de que o arquivo .env existe e contém a chave.")
+
+genai.configure(api_key=GOOGLE_API_KEY)
+
+model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 def connect_db(db_engine, user, password, database_name='university'):
     """Conecta ao banco de dados especificado."""
@@ -61,27 +74,48 @@ def get_schema(db, db_engine):
     return "\n".join(schema_parts)
 
 def generate_sql(schema, pergunta):
-    """Gera a consulta SQL a partir da pergunta em linguagem natural e do schema."""
-    prompt = f"""
-Você é um especialista em banco de dados SQL.
+    """Gera a consulta SQL a partir da pergunta em linguagem natural e do schema usando Gemini."""
+    
+    # Esta nova estrutura de prompt é mais robusta
+    prompt = f"""### INSTRUÇÕES ###
+Você é um tradutor de linguagem natural para SQL altamente eficiente.
+Sua única tarefa é retornar um código SQL bruto e executável, baseado no schema e na pergunta do usuário.
+NUNCA adicione texto antes ou depois do código SQL.
+NUNCA use formatação Markdown como ```sql.
+NUNCA adicione explicações ou comentários.
 
-Baseado no seguinte schema:
-
+### SCHEMA DO BANCO DE DADOS ###
 {schema}
 
-Responda APENAS com a consulta SQL, SEM explicações, SEM passos intermediários, SEM texto adicional, SEM tags <think>.
+### EXEMPLOS DE RESPOSTA ###
+Pergunta: "Quantos alunos existem no total?"
+SQL: SELECT COUNT(*) FROM aluno;
 
-Responda sempre com uma consulta SQL válida, mesmo que seja uma pergunta sobre estrutura do banco de dados que você saiba responder, responda uma consulta SQL (exemplo: SHOW TABLES;).
+Pergunta: "Mostre o nome de todos os cursos."
+SQL: SELECT nome_curso FROM curso;
 
+Pergunta: "liste todas as tabelas"
+SQL: SHOW TABLES;
+
+### TAREFA ATUAL ###
 Pergunta: "{pergunta}"
-"""
-    resposta = client.chat(
-        model='qwen3:0.6b',
-        messages=[{'role': 'user', 'content': prompt}]
-    )
-    conteudo = resposta['message']['content']
-    conteudo_limpo = re.sub(r'<think>.*?</think>', '', conteudo, flags=re.DOTALL).strip()
-    return conteudo_limpo
+SQL:"""
+
+    response = model.generate_content(prompt)
+    
+    # Mesmo com o prompt forte, adicionamos uma camada de limpeza para garantir.
+    try:
+        sql_query = response.text.strip()
+        # Remove potenciais marcações de código que o modelo pode adicionar
+        sql_query = re.sub(r"```(sql)?", "", sql_query, flags=re.IGNORECASE)
+        sql_query = sql_query.strip()
+        return sql_query
+    except Exception as e:
+        print(f"Erro ao extrair texto da resposta do modelo: {e}")
+        # Retorna a resposta bruta para depuração se houver um erro inesperado
+        # na estrutura da resposta (o que é raro com generate_content)
+        return response.candidates[0].content.parts[0].text if response.candidates else ""
+
 
 def execute_sql(db, sql_query):
     """Executa a consulta SQL e retorna os resultados com nomes das colunas."""
@@ -100,7 +134,8 @@ def execute_sql(db, sql_query):
 def main_loop():
     db_engine = input("Se você deseja utilizar mySQL digite 'mysql', se deseja utilizar PostgreSQL digite 'postgresql': ").strip().lower()
     user = input("Digite o seu nome de usuário: ")
-    password = input("Digite a senha do banco de dados: ")
+    import getpass
+    password = getpass.getpass("Digite a senha do banco de dados: ")
     
     try:
         db = connect_db(db_engine, user, password)
@@ -152,4 +187,3 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
-
