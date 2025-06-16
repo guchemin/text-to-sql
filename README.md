@@ -214,22 +214,7 @@ LIMIT 5;
 - Formato CSV compatível com Excel
 - Preserva acentos e caracteres especiais
 
-## 🤝 Contribuição
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para detalhes.
 
-## 🆘 Suporte
-
-- 📧 **Email**: [seu-email@example.com](mailto:seu-email@example.com)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/seu-usuario/text-to-sql/issues)
-- 💬 **Discussões**: [GitHub Discussions](https://github.com/seu-usuario/text-to-sql/discussions)
