@@ -288,7 +288,6 @@ class App:
         )
         self.connect_button.pack()
 
-    # >>>>> NOVA FUNÇÃO PARA LISTAR BANCOS DE DADOS <<<<<
     def list_and_populate_databases(self):
         db_engine = self.db_engine_combo.get().strip().lower()
         user = self.user_entry.get().strip()
@@ -359,8 +358,6 @@ class App:
                 self.db = None
             self.generate_sql_button.configure(state="disabled")
             self.status_label.configure(text="* Erro na conexão", text_color=("#ef4444", "#f87171"))
-            
-    # --- O RESTANTE DO CÓDIGO PERMANECE IGUAL ---
 
     def create_schema_section(self, parent):
         # Frame do schema
