@@ -27,7 +27,6 @@ Este projeto converte perguntas em linguagem natural para consultas SQL utilizan
 ```bash
 git clone https://github.com/guchemin/text-to-sql.git
 cd text-to-sql
-pip install -r requirements.txt
 ```
 
 Crie o arquivo `.env` na raiz:
