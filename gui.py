@@ -208,7 +208,7 @@ class App:
             text=">> Conexão com Banco de Dados",
             font=ctk.CTkFont(size=18, weight="bold")
         )
-        section_title.grid(row=0, column=0, columnspan=2, pady=(25, 20), padx=25)
+        section_title.grid(row=0, column=0, columnspan=3, pady=(25, 20), padx=25)
         
         # Motor do banco
         ctk.CTkLabel(conn_frame, text="Motor:", font=ctk.CTkFont(weight="bold", size=14)).grid(
@@ -222,7 +222,7 @@ class App:
             height=35
         )
         self.db_engine_combo.set("postgresql")
-        self.db_engine_combo.grid(row=1, column=1, padx=(15, 25), pady=10, sticky="ew")
+        self.db_engine_combo.grid(row=1, column=1, columnspan=2, padx=(15, 25), pady=10, sticky="ew")
         
         # Usuário
         ctk.CTkLabel(conn_frame, text="Usuário:", font=ctk.CTkFont(weight="bold", size=14)).grid(
@@ -235,7 +235,7 @@ class App:
             height=35
         )
         self.user_entry.insert(0, "postgres")
-        self.user_entry.grid(row=2, column=1, padx=(15, 25), pady=10, sticky="ew")
+        self.user_entry.grid(row=2, column=1, columnspan=2, padx=(15, 25), pady=10, sticky="ew")
         
         # Senha
         ctk.CTkLabel(conn_frame, text="Senha:", font=ctk.CTkFont(weight="bold", size=14)).grid(
@@ -248,35 +248,120 @@ class App:
             font=ctk.CTkFont(size=13),
             height=35
         )
-        self.password_entry.grid(row=3, column=1, padx=(15, 25), pady=10, sticky="ew")
-        
-        # Database
-        ctk.CTkLabel(conn_frame, text="Database:", font=ctk.CTkFont(weight="bold", size=14)).grid(
-            row=4, column=0, padx=(25, 15), pady=10, sticky="w"
-        )
-        self.dbname_entry = ctk.CTkEntry(
+        self.password_entry.grid(row=3, column=1, columnspan=2, padx=(15, 25), pady=10, sticky="ew")
+
+        # Botão para listar os bancos de dados
+        self.list_dbs_button = ctk.CTkButton(
             conn_frame,
-            placeholder_text="Nome do banco de dados",
+            text="Listar Bancos de Dados",
+            command=self.list_and_populate_databases,
+            font=ctk.CTkFont(size=13, weight="bold"),
+            height=35
+        )
+        self.list_dbs_button.grid(row=4, column=0, columnspan=3, pady=15, padx=25)
+        
+        # ComboBox para escolher o Database
+        ctk.CTkLabel(conn_frame, text="Database:", font=ctk.CTkFont(weight="bold", size=14)).grid(
+            row=5, column=0, padx=(25, 15), pady=10, sticky="w"
+        )
+        self.dbname_combo = ctk.CTkComboBox(
+            conn_frame,
+            values=["Clique em 'Listar' acima"],
+            state="disabled",
             font=ctk.CTkFont(size=13),
             height=35
         )
-        self.dbname_entry.insert(0, "university")
-        self.dbname_entry.grid(row=4, column=1, padx=(15, 25), pady=10, sticky="ew")
+        self.dbname_combo.grid(row=5, column=1, columnspan=2, padx=(15, 25), pady=10, sticky="ew")
         
         # Botão de conexão
         button_frame = ctk.CTkFrame(conn_frame, fg_color="transparent")
-        button_frame.grid(row=5, column=0, columnspan=2, pady=25)
+        button_frame.grid(row=6, column=0, columnspan=3, pady=25)
         
         self.connect_button = ctk.CTkButton(
             button_frame,
             text="Conectar e Carregar Schema",
             command=self.connect_and_load_schema,
+            state="disabled", # Começa desabilitado
             font=ctk.CTkFont(size=14, weight="bold"),
             height=40,
             width=250
         )
         self.connect_button.pack()
-        
+
+    # >>>>> NOVA FUNÇÃO PARA LISTAR BANCOS DE DADOS <<<<<
+    def list_and_populate_databases(self):
+        db_engine = self.db_engine_combo.get().strip().lower()
+        user = self.user_entry.get().strip()
+        password = self.password_entry.get().strip()
+
+        if not all([db_engine, user]):
+            messagebox.showerror("Entrada Inválida", "Motor e Usuário são obrigatórios para listar os bancos.")
+            return
+
+        try:
+            self.status_label.configure(text="* Listando bancos de dados...", text_color=("#f59e0b", "#fbbf24"))
+            self.root.update()
+
+            available_dbs = script.list_databases(db_engine, user, password)
+
+            if available_dbs:
+                self.dbname_combo.configure(values=available_dbs, state="normal")
+                self.dbname_combo.set(available_dbs[0])
+                self.connect_button.configure(state="normal")
+                self.status_label.configure(text="* Bancos listados. Selecione um e conecte.", text_color=self.colors['accent'])
+            else:
+                messagebox.showwarning("Aviso", "Nenhum banco de dados de usuário foi encontrado.")
+                self.status_label.configure(text="* Nenhum banco de dados encontrado.", text_color=self.colors['warning'])
+                self.dbname_combo.configure(values=[], state="disabled")
+                self.connect_button.configure(state="disabled")
+
+        except Exception as e:
+            messagebox.showerror("Erro de Credenciais", f"Não foi possível listar os bancos. Verifique o usuário e senha.\n\nErro: {e}")
+            self.status_label.configure(text="* Erro ao listar bancos.", text_color=self.colors['danger'])
+            self.dbname_combo.configure(values=[], state="disabled")
+            self.connect_button.configure(state="disabled")
+
+    def connect_and_load_schema(self):
+        # self.db_engine e user já são definidos na listagem, mas pegamos de novo por segurança
+        self.db_engine = self.db_engine_combo.get().strip().lower()
+        user = self.user_entry.get().strip()
+        password = self.password_entry.get().strip()
+        # >>>>> ALTERAÇÃO PRINCIPAL AQUI <<<<<
+        dbname = self.dbname_combo.get().strip()
+
+        if not all([self.db_engine, user, dbname]):
+            messagebox.showerror("Erro de Conexão", "Motor, Usuário e um Banco de Dados selecionado são obrigatórios.")
+            return
+
+        try:
+            self.status_label.configure(text="* Conectando ao banco de dados...", text_color=("#f59e0b", "#fbbf24"))
+            self.root.update()
+            
+            self.db = script.connect_db(self.db_engine, user, password, dbname)
+            messagebox.showinfo("Conexão", f"Conectado ao banco de dados '{dbname}' com sucesso!")
+            
+            self.status_label.configure(text="* Carregando schema...", text_color=("#f59e0b", "#fbbf24"))
+            self.root.update()
+            
+            self.schema = script.get_schema(self.db, self.db_engine)
+            self.schema_text.configure(state="normal")
+            self.schema_text.delete("1.0", "end")
+            self.schema_text.insert("1.0", self.schema)
+            self.schema_text.configure(state="disabled")
+            
+            self.generate_sql_button.configure(state="normal")
+            
+            self.status_label.configure(text="* Pronto para consultas!", text_color=("#10b981", "#34d399"))
+        except Exception as e:
+            messagebox.showerror("Erro de Conexão", f"Não foi possível conectar ou carregar o schema: {e}")
+            if self.db:
+                self.db.close()
+                self.db = None
+            self.generate_sql_button.configure(state="disabled")
+            self.status_label.configure(text="* Erro na conexão", text_color=("#ef4444", "#f87171"))
+            
+    # --- O RESTANTE DO CÓDIGO PERMANECE IGUAL ---
+
     def create_schema_section(self, parent):
         # Frame do schema
         schema_frame = ctk.CTkFrame(parent)
@@ -549,43 +634,6 @@ class App:
             self.current_columns = None
             self.save_csv_button.configure(state="disabled")
 
-    def connect_and_load_schema(self):
-        self.db_engine = self.db_engine_combo.get().strip().lower()
-        user = self.user_entry.get().strip()
-        password = self.password_entry.get().strip()
-        dbname = self.dbname_entry.get().strip()
-
-        if not all([self.db_engine, user, dbname]):
-            messagebox.showerror("Erro de Conexão", "Motor, Usuário e Nome do Banco de Dados são obrigatórios.")
-            return
-
-        try:
-            self.status_label.configure(text="* Conectando ao banco de dados...", text_color=("#f59e0b", "#fbbf24"))
-            self.root.update()
-            
-            self.db = script.connect_db(self.db_engine, user, password, dbname)
-            messagebox.showinfo("Conexão", "Conectado ao banco de dados com sucesso!")
-            
-            self.status_label.configure(text="* Carregando schema...", text_color=("#f59e0b", "#fbbf24"))
-            self.root.update()
-            
-            self.schema = script.get_schema(self.db, self.db_engine)
-            self.schema_text.configure(state="normal")
-            self.schema_text.delete("1.0", "end")
-            self.schema_text.insert("1.0", self.schema)
-            self.schema_text.configure(state="disabled")
-            
-            self.generate_sql_button.configure(state="normal")
-            
-            self.status_label.configure(text="* Pronto para consultas!", text_color=("#10b981", "#34d399"))
-        except Exception as e:
-            messagebox.showerror("Erro de Conexão", f"Não foi possível conectar ou carregar o schema: {e}")
-            if self.db:
-                self.db.close()
-                self.db = None
-            self.generate_sql_button.configure(state="disabled")
-            self.status_label.configure(text="* Erro na conexão", text_color=("#ef4444", "#f87171"))
-
     def generate_and_execute_sql(self):
         natural_query = self.natural_query_entry.get().strip()
         if not natural_query:
@@ -661,4 +709,4 @@ if __name__ == "__main__":
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     
     # Executar a aplicação
-    root.mainloop() 
+    root.mainloop()
