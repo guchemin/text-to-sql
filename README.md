@@ -213,8 +213,3 @@ LIMIT 5;
 - Resultados incluem coluna de índice automática
 - Formato CSV compatível com Excel
 - Preserva acentos e caracteres especiais
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para detalhes.
-
