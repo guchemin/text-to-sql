@@ -1,0 +1,22 @@
+# Interface gráfica moderna
+customtkinter==5.2.2
+
+# Processamento de dados
+pandas==2.3.0
+
+# Conectores de banco de dados
+psycopg2-binary==2.9.10
+PyMySQL==1.1.1
+
+# Google Generative AI (Gemini)
+google-generativeai==0.8.5
+
+# Criptografia e segurança
+cryptography==45.0.4
+
+# Gerenciamento de variáveis de ambiente
+python-dotenv==1.1.0
+
+# Dependências adicionais que podem ser necessárias
+requests>=2.32.0
+certifi>=2025.6.15 
