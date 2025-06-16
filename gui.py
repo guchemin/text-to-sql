@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
+import csv
 import script  # Importa o script refatorado
 
 # Configurar o tema global
@@ -386,13 +387,34 @@ class App:
         results_frame.grid(row=6, column=0, sticky="ew", padx=25, pady=20)
         results_frame.grid_columnconfigure(0, weight=1)
         
-        # Título da seção
+        # Frame para título e botão salvar
+        title_frame = ctk.CTkFrame(results_frame, fg_color="transparent")
+        title_frame.grid(row=0, column=0, pady=(25, 20), sticky="ew")
+        title_frame.grid_columnconfigure(0, weight=1)
+        title_frame.grid_columnconfigure(1, weight=0)
+        title_frame.grid_columnconfigure(2, weight=1)
+        
+        # Título da seção (centralizado)
         section_title = ctk.CTkLabel(
-            results_frame,
+            title_frame,
             text=">> Resultados da Consulta",
             font=ctk.CTkFont(size=18, weight="bold")
         )
-        section_title.grid(row=0, column=0, pady=(25, 20))
+        section_title.grid(row=0, column=0, columnspan=3)
+        
+        # Botão para salvar CSV (posicionado à direita com padding)
+        self.save_csv_button = ctk.CTkButton(
+            title_frame,
+            text="Salvar CSV",
+            command=self.save_results_to_csv,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            height=32,
+            width=100,
+            state="disabled",
+            fg_color=("#3b82f6", "#60a5fa"),
+            hover_color=("#2563eb", "#3b82f6")
+        )
+        self.save_csv_button.grid(row=0, column=2, sticky="e", padx=(0, 15))
         
         # Frame scrollable para resultados
         self.results_scrollable = ctk.CTkScrollableFrame(
@@ -409,6 +431,10 @@ class App:
         # Configurar rolagem contextual para os resultados
         self.setup_contextual_scrolling(self.results_scrollable, "results")
         
+        # Variáveis para armazenar dados dos resultados para CSV
+        self.current_results = None
+        self.current_columns = None
+        
     def create_results_placeholder(self):
         placeholder = ctk.CTkLabel(
             self.results_container,
@@ -421,6 +447,11 @@ class App:
     def clear_results(self):
         for widget in self.results_container.winfo_children():
             widget.destroy()
+        # Limpar dados armazenados e desabilitar botão CSV
+        self.current_results = None
+        self.current_columns = None
+        if hasattr(self, 'save_csv_button'):
+            self.save_csv_button.configure(state="disabled")
             
     def display_results(self, resultados, colunas):
         self.clear_results()
@@ -433,12 +464,38 @@ class App:
                 text_color=self.colors['success']
             )
             success_label.pack(pady=20)
+            # Não há resultados para salvar
+            self.current_results = None
+            self.current_columns = None
+            self.save_csv_button.configure(state="disabled")
             return
             
-        # Criar cabeçalho
+        # Armazenar dados para CSV (incluindo coluna de índice)
+        csv_columns = ["#"] + colunas
+        csv_results = []
+        for i, linha in enumerate(resultados):
+            csv_row = [str(i + 1)] + [str(valor) for valor in linha]
+            csv_results.append(csv_row)
+        
+        self.current_columns = csv_columns
+        self.current_results = csv_results
+        self.save_csv_button.configure(state="normal")
+            
+        # Criar cabeçalho com coluna de índice
         header_frame = ctk.CTkFrame(self.results_container)
         header_frame.pack(fill="x", padx=12, pady=(12, 8))
         
+        # Adicionar coluna de índice como primeira coluna
+        index_header = ctk.CTkLabel(
+            header_frame,
+            text="#",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            width=50,
+            anchor="center"
+        )
+        index_header.grid(row=0, column=0, padx=4, pady=4, sticky="ew")
+        
+        # Adicionar as outras colunas
         for i, coluna in enumerate(colunas):
             header_label = ctk.CTkLabel(
                 header_frame,
@@ -447,7 +504,7 @@ class App:
                 width=140,
                 anchor="w"  # Alinhamento à esquerda
             )
-            header_label.grid(row=0, column=i, padx=4, pady=4, sticky="ew")
+            header_label.grid(row=0, column=i+1, padx=4, pady=4, sticky="ew")
             
         # Criar linhas de dados
         if resultados:
@@ -458,6 +515,17 @@ class App:
                 )
                 row_frame.pack(fill="x", padx=12, pady=2)
                 
+                # Adicionar número sequencial como primeira coluna
+                index_label = ctk.CTkLabel(
+                    row_frame,
+                    text=str(row_idx + 1),
+                    font=ctk.CTkFont(size=11),
+                    width=50,
+                    anchor="center"
+                )
+                index_label.grid(row=0, column=0, padx=4, pady=4, sticky="ew")
+                
+                # Adicionar os dados das outras colunas
                 for col_idx, valor in enumerate(linha):
                     cell_text = str(valor)[:45] + "..." if len(str(valor)) > 45 else str(valor)
                     cell_label = ctk.CTkLabel(
@@ -467,7 +535,7 @@ class App:
                         width=140,
                         anchor="w"
                     )
-                    cell_label.grid(row=0, column=col_idx, padx=4, pady=4, sticky="ew")
+                    cell_label.grid(row=0, column=col_idx+1, padx=4, pady=4, sticky="ew")
         else:
             no_data_label = ctk.CTkLabel(
                 self.results_container,
@@ -476,7 +544,11 @@ class App:
                 text_color=("#6b7280", "#9ca3af")
             )
             no_data_label.pack(pady=20)
-            
+            # Não há resultados para salvar
+            self.current_results = None
+            self.current_columns = None
+            self.save_csv_button.configure(state="disabled")
+
     def connect_and_load_schema(self):
         self.db_engine = self.db_engine_combo.get().strip().lower()
         user = self.user_entry.get().strip()
@@ -563,6 +635,22 @@ class App:
             except Exception as e:
                 print(f"Erro ao fechar a conexão com o banco: {e}")
         self.root.destroy()
+
+    def save_results_to_csv(self):
+        if not self.current_results or not self.current_columns:
+            messagebox.showwarning("Nenhum resultado para salvar", "Não há resultados para salvar como CSV.")
+            return
+
+        try:
+            filename = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV Files", "*.csv")])
+            if filename:
+                with open(filename, 'w', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow(self.current_columns)
+                    writer.writerows(self.current_results)
+                messagebox.showinfo("Salvo com Sucesso", "Os resultados foram salvos com sucesso!")
+        except Exception as e:
+            messagebox.showerror("Erro ao salvar CSV", f"Erro ao salvar os resultados como CSV: {e}")
 
 if __name__ == "__main__":
     # Configurar a janela principal
