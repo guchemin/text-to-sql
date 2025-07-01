@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 import csv
-import script  # Importa o script refatorado
+import script
 
 # Configurar o tema global
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
@@ -325,7 +325,6 @@ class App:
         self.db_engine = self.db_engine_combo.get().strip().lower()
         user = self.user_entry.get().strip()
         password = self.password_entry.get().strip()
-        # >>>>> ALTERAÇÃO PRINCIPAL AQUI <<<<<
         dbname = self.dbname_combo.get().strip()
 
         if not all([self.db_engine, user, dbname]):
